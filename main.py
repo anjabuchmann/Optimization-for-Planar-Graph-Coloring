@@ -95,7 +95,7 @@ def main(args):
     pheromone_decay = 0.2
     graph = Graph(input_path, pheromone_decay)
     no_elites = 5
-    no_ants = graph.num_nodes * 100
+    no_ants = graph.num_nodes / 1000
     start_time = time.time()
     while True:
         ants = []
