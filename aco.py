@@ -4,36 +4,27 @@ import random
 import numpy as np
 import time
 
+
 class Graph(object):
     def __init__(self, input_path, decay):
-        self.num_nodes, self.adjacency_list = self.create_adjacency_list(input_path)
-        self.pheromones = self.initialize_pheromones()
         self.decay_parameter = decay
 
-    def create_adjacency_list(self, input_path):
-        adjacency_list = {}
-        with open(input_path, 'r') as f:
-            n = int(f.readline())
-            m = int(f.readline())
-            for _ in range(2*m):
-                u, v = [int(i) for i in f.readline().split()]
-                if u == v: continue     # don't add self-loops to graph
-                if u not in adjacency_list:
-                    adjacency_list[u] = set()
-                if v not in adjacency_list:
-                    adjacency_list[v] = set()
-                adjacency_list[u].add(v)
-                adjacency_list[v].add(u)
-        return n, adjacency_list
-    
-    def initialize_pheromones(self):
-        pheromones = np.ones((len(self.adjacency_list), len(self.adjacency_list)))
-        for vertex, neighbors in self.adjacency_list.items():
-            for neighbor in neighbors:
-                pheromones[vertex, neighbor] = 0        # if neighbors, desirability for same color is zero
+        self.adjacency_list = {}
+        adjacency_matrix = np.loadtxt(input_path, dtype=int)
+        for u in range(adjacency_matrix.shape[0]):
+            self.adjacency_list[u] = set()
+            for v in range(adjacency_matrix.shape[1]):
+                if adjacency_matrix[u][v] == 1 and u != v: # ignore self-loops
+                    self.adjacency_list[u].add(v)
+                    if v not in self.adjacency_list:
+                        self.adjacency_list[v] = set()
+                    self.adjacency_list[v].add(u)
         
+        self.num_nodes = len(self.adjacency_list)
         
-        return pheromones
+        self.pheromones = 1 - adjacency_matrix
+        np.fill_diagonal(self.pheromones, 0) # no self-loops
+                    
     
     def decay(self):
         self.pheromones *= self.decay_parameter
@@ -95,7 +86,7 @@ def main(args):
     pheromone_decay = 0.2
     graph = Graph(input_path, pheromone_decay)
     no_elites = 5
-    no_ants = graph.num_nodes / 1000
+    no_ants = 10 # graph.num_nodes 
     start_time = time.time()
     while True:
         ants = []
