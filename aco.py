@@ -22,7 +22,7 @@ class Graph(object):
         
         self.num_nodes = len(self.adjacency_list)
         
-        self.pheromones = 1 - adjacency_matrix
+        self.pheromones = 1 - adjacency_matrix # pheromone[i][j] := desirability for nodes i, j to have same col.
         np.fill_diagonal(self.pheromones, 0) # no self-loops
                     
     
@@ -45,13 +45,13 @@ class Ant(object):
         return start_node
 
     def walk_graph(self):
-        while self.unvisited: # keep some randomization or always choose highest pheromone node?
-            random.shuffle(self.unvisited)
+        while self.unvisited: 
+            random.shuffle(self.unvisited) # randomize order of unvisited nodes
             max_pheromone = 0
             next_node = -1
-            for node in self.unvisited: # shuffle this for randomization?
-                pheromone = self.graph.pheromones[self.current_node][node] # pheromone kinda needs to be reflexive...
-                if pheromone > max_pheromone: # choose highest option
+            for node in self.unvisited: # choose highest-pheromone option
+                pheromone = self.graph.pheromones[self.current_node][node] #
+                if pheromone > max_pheromone: 
                     max_pheromone = pheromone
                     next_node = node 
             if next_node == -1:
@@ -80,14 +80,9 @@ class Ant(object):
 
 
 
-def main(args):
-    # Hyperparameters
-    input_path = args.input_graph
-    pheromone_decay = 0.2
+def run(input_path, no_ants=10, ratio_elites=0.2, pheromone_decay=0.2, update_amt=1):
     graph = Graph(input_path, pheromone_decay)
-    no_elites = 5
-    no_ants = 10 # graph.num_nodes 
-    start_time = time.time()
+    no_elites = max(int(no_ants * ratio_elites), 1)
     while True:
         ants = []
         for _ in range(no_ants):
@@ -98,35 +93,16 @@ def main(args):
         
         ants.sort(key=lambda x: len(x.colors))
         if len(ants[0].colors) <= 4:
-            end_time = time.time()
-            print(f"Found a 4-coloring in {(end_time-start_time)*1000} ms:")
-            print(ants[0].coloring)
-            break
+            break # Found a 4-coloring (or better), stop search
+
         # pheromone update
         graph.decay()
         for ant in ants[:no_elites]:
             coloring = ant.coloring
-            print(f"Found {len(coloring)}-coloring")
             for i in range(len(coloring)):
                 for j in range(i+1, len(coloring)): # ignore self-loops
                     if coloring[i] == coloring[j]:
-                        graph.pheromones[i][j] += 1  # how much, addivite or multiplicative?
-                        graph.pheromones[j][i] += 1
+                        graph.pheromones[i][j] += update_amt  # how much, addivite or multiplicative?
+                        graph.pheromones[j][i] += update_amt
         
-    # TODO: visualization for small graphs
-    return
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Build a planar graph from a set of points.")
-    parser.add_argument(
-        "--input_graph",
-        type=Path,
-        required=True,
-        help="Path to the file containing the input graph.",
-    )
-    args = parser.parse_args()
-
-    random.seed(42)
-    main(args)
-
-     
+    return ants[0].coloring
