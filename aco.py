@@ -8,26 +8,67 @@ import time
 class Graph(object):
     def __init__(self, input_path, decay):
         self.decay_parameter = decay
-
         self.adjacency_list = {}
-        adjacency_matrix = np.loadtxt(input_path, dtype=int)
-        for u in range(adjacency_matrix.shape[0]):
-            self.adjacency_list[u] = set()
-            for v in range(adjacency_matrix.shape[1]):
-                if adjacency_matrix[u][v] == 1 and u != v: # ignore self-loops
+
+        if input_path.endswith('.txt'): # input is an adjacency list
+            with open(input_path, 'r') as f:
+                lines = [line.strip() for line in f if line.strip() and not line.startswith('//')]
+            
+            self.num_nodes = int(lines[0])
+            self.pheromones = np.ones((self.num_nodes, self.num_nodes), dtype=int) # pheromone[i][j] := desirability for nodes i, j to have same color
+
+            
+            # Initialize adjacency list
+            for i in range(self.num_nodes): self.adjacency_list[i] = set()        
+            
+            # Process edges starting from line 2 (index 2)
+            for i in range(2, len(lines)):
+                parts = lines[i].split()
+                if len(parts) >= 2:  # Ensure we have at least source and target
+                    u, v = int(parts[0]), int(parts[1])
+                    
+                    # Add edge to adjacency list
                     self.adjacency_list[u].add(v)
-                    if v not in self.adjacency_list:
-                        self.adjacency_list[v] = set()
                     self.adjacency_list[v].add(u)
+                    
+                    # Set pheromone for the edge
+                    self.pheromones[u][v] = 0
+                    self.pheromones[v][u] = 0    
+
+        elif input_path.endswith('.mat'): # process adjacency matrix
+            with open(input_path, 'r') as f:
+                lines = [line.strip() for line in f if line.strip() and not line.startswith('//')]
+            
+            # Create matrix from the lines
+            adjacency_matrix = []
+            for line in lines:
+                row = [int(val) for val in line.split()]
+                adjacency_matrix.append(row)
+            
+            # Convert to numpy array for easier manipulation
+            adjacency_matrix = np.array(adjacency_matrix)
+            
+            # Get number of nodes
+            self.num_nodes = adjacency_matrix.shape[0]
+            
+            # Initialize adjacency list
+            for i in range(self.num_nodes):
+                self.adjacency_list[i] = set()
+            
+            # Fill adjacency list from matrix
+            for i in range(self.num_nodes):
+                for j in range(self.num_nodes):
+                    if adjacency_matrix[i][j] == 1 and i != j:  # if there's an edge (and not a self-loop)
+                        self.adjacency_list[i].add(j)
+            
+            # Initialize pheromones
+            self.pheromones = 1 - adjacency_matrix  # pheromone[i][j] := desirability for nodes i, j to have same color
         
-        self.num_nodes = len(self.adjacency_list)
-        
-        self.pheromones = 1 - adjacency_matrix # pheromone[i][j] := desirability for nodes i, j to have same col.
-        np.fill_diagonal(self.pheromones, 0) # no self-loops
+        np.fill_diagonal(self.pheromones, 0)  # no self-loops
                     
     
     def decay(self):
-        self.pheromones *= self.decay_parameter
+        self.pheromones = np.round(self.pheromones * self.decay_parameter, 3)
 
 
 class Ant(object):
@@ -80,9 +121,8 @@ class Ant(object):
 
 
 
-def run(input_path, no_ants=10, ratio_elites=0.2, pheromone_decay=0.2, update_amt=1):
+def run(input_path, no_ants=10, pheromone_decay=0.2, update_amt=1):
     graph = Graph(input_path, pheromone_decay)
-    no_elites = max(int(no_ants * ratio_elites), 1)
     while True:
         ants = []
         for _ in range(no_ants):
@@ -92,17 +132,19 @@ def run(input_path, no_ants=10, ratio_elites=0.2, pheromone_decay=0.2, update_am
             ants.append(ant)
         
         ants.sort(key=lambda x: len(x.colors))
-        if len(ants[0].colors) <= 4:
+        min_colors = len(ants[0].colors)
+        if min_colors <= 4:
             break # Found a 4-coloring (or better), stop search
 
         # pheromone update
         graph.decay()
-        for ant in ants[:no_elites]:
+        for ant in ants:
             coloring = ant.coloring
+            if len(ant.colors) > min_colors: break  # only update pheromones for ants that found the best coloring so far
             for i in range(len(coloring)):
                 for j in range(i+1, len(coloring)): # ignore self-loops
                     if coloring[i] == coloring[j]:
                         graph.pheromones[i][j] += update_amt  # how much, addivite or multiplicative?
                         graph.pheromones[j][i] += update_amt
-        
     return ants[0].coloring
+
