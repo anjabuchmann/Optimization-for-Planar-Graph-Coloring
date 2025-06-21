@@ -109,7 +109,7 @@ class Ant(object):
             if neighbor in self.visited and self.coloring[neighbor] in available_colors:
                 available_colors.remove(self.coloring[neighbor])
         if available_colors:
-            self.coloring[node] = random.choice(available_colors) # better to choose randomly or favor first one?
+            self.coloring[node] = random.choice(available_colors) 
         else:
             new_color = max(self.colors) + 1
             self.coloring[node] = new_color
@@ -128,7 +128,6 @@ def run(input_path, no_ants=10, pheromone_decay=0.2, update_amt=1):
         for _ in range(no_ants):
             ant = Ant(graph)
             ant.walk_graph()
-            # add pheromones only of best ant or weighted of best k ants?
             ants.append(ant)
         
         ants.sort(key=lambda x: len(x.colors))
@@ -144,7 +143,7 @@ def run(input_path, no_ants=10, pheromone_decay=0.2, update_amt=1):
             for i in range(len(coloring)):
                 for j in range(i+1, len(coloring)): # ignore self-loops
                     if coloring[i] == coloring[j]:
-                        graph.pheromones[i][j] += update_amt  # how much, addivite or multiplicative?
+                        graph.pheromones[i][j] += update_amt  
                         graph.pheromones[j][i] += update_amt
     return ants[0].coloring
 
