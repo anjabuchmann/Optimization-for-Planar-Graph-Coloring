@@ -91,7 +91,7 @@ class Ant(object):
             max_pheromone = 0
             next_node = -1
             for node in self.unvisited: # choose highest-pheromone option
-                pheromone = self.graph.pheromones[self.current_node][node] #
+                pheromone = self.graph.pheromones[self.current_node][node] 
                 if pheromone > max_pheromone: 
                     max_pheromone = pheromone
                     next_node = node 
